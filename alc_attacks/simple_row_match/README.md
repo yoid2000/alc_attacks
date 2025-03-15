@@ -39,6 +39,8 @@ See the `tests` file for example of the setup.
 * `summary_secret.csv`: This contains a row for every secret (unknown) attribute being predicted. It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
 * * `summary_secret_known.csv`: This contains a row for every combination of secret and known attributes.  It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
 
+ALC scores of ALC=0.5 or less can be regarded as having very strong anonymity.
+
 ## Operation
 
 `srm_attack.py` does the following:
