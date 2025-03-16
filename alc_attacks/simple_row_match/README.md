@@ -50,13 +50,11 @@ It identifies the categorical columns to be used as unknown (secret) attributes.
 For each secret:
 
 * It discovers sets of known attributes that uniquely define each row of the data.
-* It makes baseline and attack predictions of the secret data.
-
-`srm_attack.py` loops through the sets of unknown attributes. In each loop, it runs an attack (a set of predictions) on every unknown attribute. After each such attack, it updates the three results files. In this fashion, the results files continuously receive more results data as `srm_attack.py` runs.
+* It selects a set of secret values where each value constitutes fewer than 60% of the rows, but more than 0.05% of the rows. We avoid very common values because they tend not to be sensitive. We avoid very rare values because most predictions tend to be False, and an occasional random correct prediction can skew the results.
+* After shuffling the target rows, it steps through the rows for both baseline and synthetic data attacks, making a prediction for each row. It quits when either the confidence bounds are with 10% of the precision for either the baseline or the attacks, and when at least 5 True predictions have been made for both baseline and attack.
+* It updates the three results files. In this fashion, the results files continuously receive more results data as `srm_attack.py` runs.
 
 Note that `srm_attack.py` can take a long time to run (many hours), so it is good to just let it go while the results files build up. 
-
-
 
 ## Limitations
 

@@ -22,14 +22,22 @@ class SrmAttack:
                  results_path: str = None,
                  max_known_col_sets: int = 1000,
                  num_per_secret_attacks: int = 100,
-                 num_rows_per_attack: int = 500,
+                 max_rows_per_attack: int = 500,
+                 min_rows_per_attack: int = 50,
+                 min_positive_predictions: int = 5,
+                 confidence_interval_tolerance: float = 0.1,
+                 conficence_level: float = 0.95,
                  ) -> None:
         # self.adf contains all of the dataframes needed for the attack, cleaned
         # up to work with ML modeling
         self.results_path = results_path
         self.max_known_col_sets = max_known_col_sets
         self.num_per_secret_attacks = num_per_secret_attacks
-        self.num_rows_per_attack = num_rows_per_attack
+        self.max_rows_per_attack = max_rows_per_attack
+        self.min_rows_per_attack = min_rows_per_attack
+        self.min_positive_predictions = min_positive_predictions
+        self.confidence_interval_tolerance = confidence_interval_tolerance
+        self.conficence_level = conficence_level
         self.adf = DataFiles(df_original, df_control, df_synthetic)
         self.base_pred = BaselinePredictor(self.adf)
         # df_atk are the rows that will be the target of the attack
@@ -77,80 +85,87 @@ class SrmAttack:
     
     def attack_known_cols_secret(self, secret_col: str,
                                  known_columns: List[str],
-                                 df_base: pd.DataFrame,
-                                 df_atk: pd.DataFrame) -> None:
+                                 df_base_in: pd.DataFrame,
+                                 df_atk_in: pd.DataFrame) -> None:
         print(f"Attack secret column {secret_col}\n    assuming known columns {known_columns}")
-        self.model_attack(secret_col, known_columns, df_base)
-        self.simple_row_attack(secret_col, known_columns, df_atk)
-
-    def model_attack(self,
-                     secret_col: str,
-                     known_columns: List[str],
-                     df_base: pd.DataFrame) -> None:
+        # Shuffle df_base and df_atk to avoid any bias
+        df_base = df_base_in.sample(frac=1).reset_index(drop=True)
+        df_atk = df_atk_in.sample(frac=1).reset_index(drop=True)
         self.base_pred.build_model(known_columns, secret_col)
-        # loop through the rows in df_base
-        num_rows = 0
-        for i, row in df_base.iterrows():
-            if num_rows > self.num_rows_per_attack:
-                break
-            num_rows += 1
-            # get the prediction for the row
-            df_row = row[known_columns].to_frame().T
-            predicted_value, proba = self.base_pred.predict(df_row)
-            true_value = row[secret_col]
-            decoded_predicted_value = self.adf.decode_value(secret_col, predicted_value)
-            decoded_true_value = self.adf.decode_value(secret_col, true_value)
-            self.pred_res.add_base_result(known_columns = known_columns,
-                                     target_col = secret_col,
-                                     predicted_value = decoded_predicted_value,
-                                     true_value = decoded_true_value,
-                                     prediction_proba = proba,
-                                     fraction_agree = None
-                                     )
+        for i in range(min(len(df_base), len(df_atk), self.max_rows_per_attack)):
+            # Get one base and attack measure at a time, and continue until we have
+            # enough confidence in the results
+            base_row = df_base.iloc[i]
+            self.model_attack(base_row, secret_col, known_columns)
+            atk_row = df_atk.iloc[i]
+            self.simple_row_attack(atk_row, secret_col, known_columns)
+            if i >= 50 and i % 10 == 0:
+                # Check for confidence after every 10 attack predictions
+                (prec, low_ci, high_ci, n) = self.pred_res.get_ci('base')
+                pos_pred_count = round(n * prec)
+                if high_ci - low_ci <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
+                    print(f"Base confidence interval ({round(low_ci)}, {round(high_ci)}) is within tolerance after {i+1} attacks on precision {round(prec)}")
+                    break
+                (prec, low_ci, high_ci, n) = self.pred_res.get_ci('attack')
+                pos_pred_count = round(n * prec)
+                if high_ci - low_ci <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
+                    print(f"Attack confidence interval ({round(low_ci)}, {round(high_ci)}) is within tolerance after {i} attacks on precision {round(prec)}")
+                    break
 
-    def simple_row_attack(self,
+    def model_attack(self, row: pd.Series,
+                     secret_col: str,
+                     known_columns: List[str]) -> None:
+        # get the prediction for the row
+        df_row = row[known_columns].to_frame().T
+        predicted_value, proba = self.base_pred.predict(df_row)
+        true_value = row[secret_col]
+        decoded_predicted_value = self.adf.decode_value(secret_col, predicted_value)
+        decoded_true_value = self.adf.decode_value(secret_col, true_value)
+        self.pred_res.add_base_result(known_columns = known_columns,
+                                    target_col = secret_col,
+                                    predicted_value = decoded_predicted_value,
+                                    true_value = decoded_true_value,
+                                    prediction_proba = proba,
+                                    fraction_agree = None
+                                    )
+
+    def simple_row_attack(self, row: pd.Series,
                           secret_col: str,
-                          known_columns: List[str],
-                          df_atk: pd.DataFrame) -> None:
-        num_rows = 0
-        for i, row in df_atk.iterrows():
-            if num_rows > self.num_rows_per_attack:
-                break
-            num_rows += 1
-            predictions = []
-            for df_syn in self.adf.syn_list:
-                # check if all known_columns and secret are in df_syn
-                all_columns = known_columns + [secret_col]
-                if not all(col in df_syn.columns for col in all_columns):
-                    continue
-                df_row = row[known_columns].to_frame().T
-                ans_syn = anonymeter_mods.run_anonymeter_attack(
-                                                targets=df_row,
-                                                basis=df_syn,
-                                                aux_cols=known_columns,
-                                                secret=secret_col,
-                                                regression=False)
-                # Compute an answer based on the vanilla anonymeter attack
-                pred_value_series = ans_syn['guess_series']
-                pred_value = pred_value_series.iloc[0]
-                predictions.append(pred_value.item())
-            # determine the most frequent prediction in predictions, and the number
-            # of times it appears
-            counter = Counter(predictions)
-            most_common_value, most_common_count = counter.most_common(1)[0]
-            # determine the fraction of the predictions that are the most common
-            fraction_agree = most_common_count / len(predictions)
-            # get the true value of the secret column
-            true_value = row[secret_col]
-            decoded_predicted_value = self.adf.decode_value(secret_col, most_common_value)
-            decoded_true_value = self.adf.decode_value(secret_col, true_value)
-            self.pred_res.add_attack_result(known_columns = known_columns,
-                                     target_col = secret_col,
-                                     predicted_value = decoded_predicted_value,
-                                     true_value = decoded_true_value,
-                                     prediction_proba = None,
-                                     fraction_agree = fraction_agree
-                                     )
+                          known_columns: List[str]) -> None:
+        predictions = []
+        for df_syn in self.adf.syn_list:
+            # check if all known_columns and secret are in df_syn
+            all_columns = known_columns + [secret_col]
+            if not all(col in df_syn.columns for col in all_columns):
+                continue
+            df_row = row[known_columns].to_frame().T
+            ans_syn = anonymeter_mods.run_anonymeter_attack(
+                                            targets=df_row,
+                                            basis=df_syn,
+                                            aux_cols=known_columns,
+                                            secret=secret_col,
+                                            regression=False)
+            # Compute an answer based on the vanilla anonymeter attack
+            pred_value_series = ans_syn['guess_series']
+            pred_value = pred_value_series.iloc[0]
+            predictions.append(pred_value.item())
+        # determine the most frequent prediction in predictions, and the number
+        # of times it appears
+        counter = Counter(predictions)
+        most_common_value, most_common_count = counter.most_common(1)[0]
+        # determine the fraction of the predictions that are the most common
+        fraction_agree = most_common_count / len(predictions)
+        # get the true value of the secret column
+        true_value = row[secret_col]
+        decoded_predicted_value = self.adf.decode_value(secret_col, most_common_value)
+        decoded_true_value = self.adf.decode_value(secret_col, true_value)
+        self.pred_res.add_attack_result(known_columns = known_columns,
+                                    target_col = secret_col,
+                                    predicted_value = decoded_predicted_value,
+                                    true_value = decoded_true_value,
+                                    prediction_proba = None,
+                                    fraction_agree = fraction_agree
+                                    )
 
 
 def find_valid_targets(df: pd.DataFrame, column: str) -> list:
