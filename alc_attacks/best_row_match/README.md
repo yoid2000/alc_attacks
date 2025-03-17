@@ -1,4 +1,4 @@
-# Simple Row Match attack
+# Best Row Match attack
 
 This attack is designed to work with microdata (aka synthetic data). The attack is an attribute inference attack: the attacker knows from information about a person in the anonymized data, finds a row that "best matches" that person, and the infers unknown attributes.
 
@@ -10,13 +10,13 @@ A unique feature of our attack is that it can handle the case where multiple syn
 
 ## To run
 
-Navigate to simple_row_match.
+Navigate to best_row_match.
 
-Run `python srm_attack.py attack /path/to/attack_directory`
+Run `python brm_attack.py attack /path/to/attack_directory`
 
 ## Setup
 
-`srm_attack.y` expects to find everything it needs in `attack_directory/inputs`. Specifically, the following should be placed there:
+`brm_attack.y` expects to find everything it needs in `attack_directory/inputs`. Specifically, the following should be placed there:
 
 * `original.csv`: Contains the original data, minus randomly selected rows that are set aside as controls for computing the baseline.
 
@@ -33,7 +33,7 @@ See the `tests` file for example of the setup.
 
 ## Results
 
-`srm_attack.py` creates a directory `results` under `attack_diretory`. `results` contains three files:
+`brm_attack.py` creates a directory `results` under `attack_diretory`. `results` contains three files:
 
 * `summary_raw.csv`: This contains the results of every individual prediction, both baseline and attack.
 * `summary_secret.csv`: This contains a row for every secret (unknown) attribute being predicted. It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
@@ -43,7 +43,7 @@ ALC scores of ALC=0.5 or less can be regarded as having very strong anonymity.
 
 ## Operation
 
-`srm_attack.py` does the following:
+`brm_attack.py` does the following:
 
 It identifies the categorical columns to be used as unknown (secret) attributes.
 
@@ -52,9 +52,9 @@ For each secret:
 * It discovers sets of known attributes that uniquely define each row of the data.
 * It selects a set of secret values where each value constitutes fewer than 60% of the rows, but more than 0.05% of the rows. We avoid very common values because they tend not to be sensitive. We avoid very rare values because most predictions tend to be False, and an occasional random correct prediction can skew the results.
 * After shuffling the target rows, it steps through the rows for both baseline and synthetic data attacks, making a prediction for each row. It quits when either the confidence bounds are with 10% of the precision for either the baseline or the attacks, and when at least 5 True predictions have been made for both baseline and attack.
-* It updates the three results files. In this fashion, the results files continuously receive more results data as `srm_attack.py` runs.
+* It updates the three results files. In this fashion, the results files continuously receive more results data as `brm_attack.py` runs.
 
-Note that `srm_attack.py` can take a long time to run (many hours), so it is good to just let it go while the results files build up. 
+Note that `brm_attack.py` can take a long time to run (many hours), so it is good to just let it go while the results files build up. 
 
 ## Limitations
 

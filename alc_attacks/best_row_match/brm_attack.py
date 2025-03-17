@@ -14,7 +14,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 test_params = False
 
-class SrmAttack:
+class BrmAttack:
     def __init__(self,
                  df_original: pd.DataFrame,
                  df_control: pd.DataFrame,
@@ -43,6 +43,19 @@ class SrmAttack:
         # df_atk are the rows that will be the target of the attack
         self.df_atk = self.adf.orig.sample(len(self.adf.cntl))
         self.pred_res = PredictionResults(results_path = self.results_path)
+        self.secret_cols = [col for col in self.adf.orig.columns if self.adf.is_categorical(col)]
+        print(f"{len(self.secret_cols)} categorical columns of {len(self.adf.orig.columns)} columns: {self.secret_cols}")
+
+    def run_all_columns_attack(self):
+        '''
+        Runs attacks assuming all columns except secret are known
+        '''
+        # select a set of original rows to use for the attack
+        df_atk = self.adf.orig.sample(len(self.adf.cntl))
+        for secret_col in self.secret_cols:
+            known_columns = [col for col in self.adf.orig.columns if col != secret_col]
+            self.attack_known_cols_secret(secret_col, known_columns, self.adf.cntl, df_atk)
+            self.pred_res.summarize_results()
 
     def run_auto_attack(self):
         '''
@@ -51,6 +64,7 @@ class SrmAttack:
         if self.results_path is None:
             # raise a value error
             raise ValueError("results_path must be set")
+        self.run_all_columns_attack()
         # select a set of original rows to use for the attack
         df_atk = self.adf.orig.sample(len(self.adf.cntl))
         # Count the number of unique rows in df_atk
@@ -61,9 +75,7 @@ class SrmAttack:
         print(f"Minimum set size: {min_set_size}, Maximum set size: {max_set_size}")
         per_secret_column_sets = {}
         max_col_set_size = 0
-        secret_cols = [col for col in self.adf.orig.columns if self.adf.is_categorical(col)]
-        print(f"{len(secret_cols)} categorical columns of {len(self.adf.orig.columns)} columns: {secret_cols}")
-        for secret_col in secret_cols:
+        for secret_col in self.secret_cols:
             valid_known_column_sets = [col_set for col_set in known_column_sets if secret_col not in col_set]
             sampled_known_column_sets = random.sample(valid_known_column_sets,
                                               min(self.num_per_secret_attacks, len(valid_known_column_sets)))
@@ -98,7 +110,7 @@ class SrmAttack:
             base_row = df_base.iloc[i]
             self.model_attack(base_row, secret_col, known_columns)
             atk_row = df_atk.iloc[i]
-            self.simple_row_attack(atk_row, secret_col, known_columns)
+            self.best_row_attack(atk_row, secret_col, known_columns)
             if i >= 50 and i % 10 == 0:
                 # Check for confidence after every 10 attack predictions
                 (prec, low_ci, high_ci, n) = self.pred_res.get_ci('base')
@@ -129,7 +141,7 @@ class SrmAttack:
                                     fraction_agree = None
                                     )
 
-    def simple_row_attack(self, row: pd.Series,
+    def best_row_attack(self, row: pd.Series,
                           secret_col: str,
                           known_columns: List[str]) -> None:
         predictions = []
@@ -268,7 +280,7 @@ def run_attacks(attack_files_path):
             syn_dfs.append(pd.read_csv(os.path.join(synthetic_path, file)))
     results_path = os.path.join(attack_files_path, 'results')
     if test_params:
-        srm = SrmAttack(df_original=df_original,
+        brm = BrmAttack(df_original=df_original,
                         df_control=df_control,
                         df_synthetic=syn_dfs,
                         results_path=results_path,
@@ -277,12 +289,12 @@ def run_attacks(attack_files_path):
                         num_rows_per_attack=10,
                         )
     else:
-        srm = SrmAttack(df_original=df_original,
+        brm = BrmAttack(df_original=df_original,
                         df_control=df_control,
                         df_synthetic=syn_dfs,
                         results_path=results_path,
                         )
-    srm.run_auto_attack()
+    brm.run_auto_attack()
 
 
 
