@@ -1,0 +1,66 @@
+Anonymity Loss Coefficient Summary
+
+Anonymity Level: VERY POOR
+    30 attacks (42.3%) have poor or no anonymity. Strengthen anonymity.
+
+21 columns used as targeted columns:
+  PUMA
+  SEX
+  MSP
+  HISP
+  RAC1P
+  NOC
+  NPF
+  HOUSING_TYPE
+  OWN_RENT
+  DENSITY
+  INDP
+  INDP_CAT
+  EDU
+  PINCP
+  PINCP_DECILE
+  POVPIP
+  DVET
+  DREM
+  DPHY
+  DEYE
+  DEAR
+
+24 columns used as known columns:
+  AGEP
+  SEX
+  MSP
+  HISP
+  RAC1P
+  NOC
+  NPF
+  HOUSING_TYPE
+  OWN_RENT
+  DENSITY
+  INDP
+  INDP_CAT
+  EDU
+  PINCP
+  PINCP_DECILE
+  POVPIP
+  DVET
+  DREM
+  DPHY
+  DEYE
+  DEAR
+  PWGTP
+  WGTP
+  PUMA
+
+Analyzed known column / target column combinations: 71
+Perfect anonymity:    11 (15.5%)
+ Strong anonymity:     0 (0.0%)
+          At risk:    30 (42.3%)
+   Poor anonymity:    30 (42.3%)
+     No anonymity:     2 (2.8%)
+
+Examples of complete anonymity loss:
+ALC: 1.0, base (prec: 0.0, recall: 1.0), attack (prec: 1.0, recall: 1.0)
+    Secret: DVET, Known: ["AGEP", "DEAR", "EDU", "INDP_CAT", "PINCP_DECILE", "POVPIP", "PUMA", "RAC1P", "SEX", "WGTP"]
+ALC: 1.0, base (prec: 0.0, recall: 1.0), attack (prec: 1.0, recall: 1.0)
+    Secret: DVET, Known: ["AGEP", "DENSITY", "EDU", "INDP", "OWN_RENT", "PINCP", "PUMA", "WGTP"]

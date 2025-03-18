@@ -137,8 +137,7 @@ class BrmAttack:
                                     target_col = secret_col,
                                     predicted_value = decoded_predicted_value,
                                     true_value = decoded_true_value,
-                                    prediction_proba = proba,
-                                    fraction_agree = None
+                                    base_confidence = proba,
                                     )
 
     def best_row_attack(self, row: pd.Series,
@@ -175,8 +174,7 @@ class BrmAttack:
                                     target_col = secret_col,
                                     predicted_value = decoded_predicted_value,
                                     true_value = decoded_true_value,
-                                    prediction_proba = None,
-                                    fraction_agree = fraction_agree
+                                    attack_confidence = fraction_agree
                                     )
 
 

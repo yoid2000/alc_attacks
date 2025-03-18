@@ -1,0 +1,61 @@
+Anonymity Loss Coefficient Summary
+
+Anonymity Level: STRONG
+    May consider reducing the strength of the anonymization so as to improve data quality.
+
+21 columns used as targeted columns:
+  PUMA
+  SEX
+  MSP
+  HISP
+  RAC1P
+  NOC
+  NPF
+  HOUSING_TYPE
+  OWN_RENT
+  DENSITY
+  INDP
+  INDP_CAT
+  EDU
+  PINCP
+  PINCP_DECILE
+  POVPIP
+  DVET
+  DREM
+  DPHY
+  DEYE
+  DEAR
+
+24 columns used as known columns:
+  AGEP
+  SEX
+  MSP
+  HISP
+  RAC1P
+  NOC
+  NPF
+  HOUSING_TYPE
+  OWN_RENT
+  DENSITY
+  INDP
+  INDP_CAT
+  EDU
+  PINCP
+  PINCP_DECILE
+  POVPIP
+  DVET
+  DREM
+  DPHY
+  DEYE
+  DEAR
+  PWGTP
+  WGTP
+  PUMA
+
+Analyzed known column / target column combinations: 48
+Perfect anonymity:    47 (97.9%)
+ Strong anonymity:     1 (2.1%)
+          At risk:     0 (0.0%)
+   Poor anonymity:     0 (0.0%)
+     No anonymity:     0 (0.0%)
+

@@ -33,11 +33,14 @@ See the `tests` file for example of the setup.
 
 ## Results
 
-`brm_attack.py` creates a directory `results` under `attack_diretory`. `results` contains three files:
+`brm_attack.py` creates a directory `results` under `attack_diretory`. `results` contains these files:
 
+* `summary.txt`: Gives a text summary of the results, included an anonymity grade ranging from VERY STRONG to VERY POOR.
 * `summary_raw.csv`: This contains the results of every individual prediction, both baseline and attack.
 * `summary_secret.csv`: This contains a row for every secret (unknown) attribute being predicted. It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
-* * `summary_secret_known.csv`: This contains a row for every combination of secret and known attributes.  It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
+* `summary_secret_known.csv`: This contains a row for every combination of secret and known attributes.  It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
+* `alc_plot.png`: A plot summarizing the ALC scores for each set of secret and known attributes.
+* `alc_plot_prec.png`: A scatterplot showing the ALC score and attack precision for each set of secret and known attributes.
 
 ALC scores of ALC=0.5 or less can be regarded as having very strong anonymity.
 
@@ -49,7 +52,8 @@ It identifies the categorical columns to be used as unknown (secret) attributes.
 
 For each secret:
 
-* It discovers sets of known attributes that uniquely define each row of the data.
+* It runs an attack assuming that all other columns are known attributes.
+* It discovers smaller sets of known attributes that uniquely define each row of the data.
 * It selects a set of secret values where each value constitutes fewer than 60% of the rows, but more than 0.05% of the rows. We avoid very common values because they tend not to be sensitive. We avoid very rare values because most predictions tend to be False, and an occasional random correct prediction can skew the results.
 * After shuffling the target rows, it steps through the rows for both baseline and synthetic data attacks, making a prediction for each row. It quits when either the confidence bounds are with 10% of the precision for either the baseline or the attacks, and when at least 5 True predictions have been made for both baseline and attack.
 * It updates the three results files. In this fashion, the results files continuously receive more results data as `brm_attack.py` runs.
