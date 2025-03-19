@@ -35,12 +35,14 @@ See the `tests` file for example of the setup.
 
 `brm_attack.py` creates a directory `results` under `attack_diretory`. `results` contains these files:
 
-* `summary.txt`: Gives a text summary of the results, included an anonymity grade ranging from VERY STRONG to VERY POOR.
 * `summary_raw.csv`: This contains the results of every individual prediction, both baseline and attack.
 * `summary_secret.csv`: This contains a row for every secret (unknown) attribute being predicted. It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
 * `summary_secret_known.csv`: This contains a row for every combination of secret and known attributes.  It gives the precision for all predictions for both baseline and attack, and computes the ALC score.
-* `alc_plot.png`: A plot summarizing the ALC scores for each set of secret and known attributes.
+* `summary.txt`: Gives a text summary of the results, included an anonymity grade ranging from VERY STRONG to VERY POOR.
+* `alc_plot.png`: A plot summarizing the ALC scores for each set of secret attributes.
+* `alc_plot_best.png`: A plot summarizing the ALC scores for the highest ALC score among a given set of secret attribute and known attributes.
 * `alc_plot_prec.png`: A scatterplot showing the ALC score and attack precision for each set of secret and known attributes.
+* `alc_plot_prec_best.png`: A scatterplot showing the highest ALC score and attack precision for each set of secret and known attributes.
 
 ALC scores of ALC=0.5 or less can be regarded as having very strong anonymity.
 

@@ -26,7 +26,8 @@ class BrmAttack:
                  min_rows_per_attack: int = 50,
                  min_positive_predictions: int = 5,
                  confidence_interval_tolerance: float = 0.1,
-                 conficence_level: float = 0.95,
+                 confidence_level: float = 0.95,
+                 attack_name: str = '',
                  ) -> None:
         # self.adf contains all of the dataframes needed for the attack, cleaned
         # up to work with ML modeling
@@ -37,12 +38,13 @@ class BrmAttack:
         self.min_rows_per_attack = min_rows_per_attack
         self.min_positive_predictions = min_positive_predictions
         self.confidence_interval_tolerance = confidence_interval_tolerance
-        self.conficence_level = conficence_level
+        self.confidence_level = confidence_level
         self.adf = DataFiles(df_original, df_control, df_synthetic)
         self.base_pred = BaselinePredictor(self.adf)
         # df_atk are the rows that will be the target of the attack
         self.df_atk = self.adf.orig.sample(len(self.adf.cntl))
-        self.pred_res = PredictionResults(results_path = self.results_path)
+        self.pred_res = PredictionResults(results_path = self.results_path,
+                                          attack_name = attack_name)
         self.secret_cols = [col for col in self.adf.orig.columns if self.adf.is_categorical(col)]
         print(f"{len(self.secret_cols)} categorical columns of {len(self.adf.orig.columns)} columns: {self.secret_cols}")
 
@@ -238,6 +240,8 @@ def apply_bins(df, bins_dict):
     return df
 
 def run_attacks(attack_files_path):
+    #split attack_files_path into the path and the attack_files directory
+    attack_dir_name = os.path.split(attack_files_path)[-1]
     # Check that there is indeed a directory at attack_files_path
     if not os.path.isdir(attack_files_path):
         print(f"Error: {attack_files_path} is not a directory")
@@ -285,12 +289,14 @@ def run_attacks(attack_files_path):
                         max_known_col_sets=100,
                         num_per_secret_attacks=2,
                         num_rows_per_attack=10,
+                        attack_name = attack_dir_name,
                         )
     else:
         brm = BrmAttack(df_original=df_original,
                         df_control=df_control,
                         df_synthetic=syn_dfs,
                         results_path=results_path,
+                        attack_name = attack_dir_name,
                         )
     brm.run_auto_attack()
 
