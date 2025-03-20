@@ -115,15 +115,16 @@ class BrmAttack:
             self.best_row_attack(atk_row, secret_col, known_columns)
             if i >= 50 and i % 10 == 0:
                 # Check for confidence after every 10 attack predictions
-                (prec, low_ci, high_ci, n) = self.pred_res.get_ci('base')
-                pos_pred_count = round(n * prec)
-                if high_ci - low_ci <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
-                    print(f"Base confidence interval ({round(low_ci)}, {round(high_ci)}) is within tolerance after {i+1} attacks on precision {round(prec)}")
+                ci_info = self.pred_res.get_ci()
+                cii = ci_info['base']
+                pos_pred_count = round(cii['n'] * cii['prec'])
+                if cii['ci_high'] - cii['ci_low'] <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
+                    print(f"Base confidence interval ({round(cii['ci_low'],2)}, {round(cii['ci_high'],2)}) is within tolerance after {i+1} attacks on precision {round(cii['prec'],2)}")
                     break
-                (prec, low_ci, high_ci, n) = self.pred_res.get_ci('attack')
-                pos_pred_count = round(n * prec)
-                if high_ci - low_ci <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
-                    print(f"Attack confidence interval ({round(low_ci)}, {round(high_ci)}) is within tolerance after {i} attacks on precision {round(prec)}")
+                cii = ci_info['attack']
+                pos_pred_count = round(cii['n'] * cii['prec'])
+                if cii['ci_high'] - cii['ci_low'] <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
+                    print(f"Attack confidence interval ({round(cii['ci_low'],2)}, {round(cii['ci_high'],2)}) is within tolerance after {i+1} attacks on precision {round(cii['prec'],2)}")
                     break
 
     def model_attack(self, row: pd.Series,
