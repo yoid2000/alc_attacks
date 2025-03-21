@@ -22,11 +22,11 @@ Run `python brm_attack.py attack /path/to/attack_directory`
 
 * `control.csv`: This file contains randomly selected rows from `original.csv`. We recommend 1000 rows.
 
-* `synthetic_files`: This is a directory containing one or more synthetic datasets generated from `original.csv`.
+* `synthetic_files`: This is a directory containing one or more synthetic datasets generated from the original data. Note that this data can come from all of the original data (both `original.csv` and `control.csv`). However, it is also ok if `synthetic_files` comes only from `original.csv`.
 
 All of the csv files must have the same columns.
 
-Note that the larger `original.csv` is, the longer it'll take to run the tests. Therefore it might be a good idea to limit `original.csv` (and subsequently the synthetic dataset) to 10k-20k or so rows.
+Note that the larger the synthetic datasets are, the longer it'll take to run the tests. Therefore it might be a good idea to limit the synthetic datasets (and likewise the original data from which they were derived) to 10k-20k or so rows.
 
 See the `tests` file for example of the setup.
 
