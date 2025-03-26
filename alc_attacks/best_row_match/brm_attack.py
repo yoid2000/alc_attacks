@@ -45,8 +45,7 @@ class BrmAttack:
         self.df_atk = self.adf.orig.sample(len(self.adf.cntl))
         self.pred_res = PredictionResults(results_path = self.results_path,
                                           attack_name = attack_name)
-        self.secret_cols = [col for col in self.adf.orig.columns if self.adf.is_categorical(col)]
-        print(f"{len(self.secret_cols)} categorical columns of {len(self.adf.orig.columns)} columns: {self.secret_cols}")
+        self.secret_cols = list(self.adf.orig.columns)
 
     def run_all_columns_attack(self):
         '''

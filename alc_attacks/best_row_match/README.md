@@ -65,8 +65,6 @@ Note that `brm_attack.py` can take a long time to run (many hours), so it is goo
 
 ## Limitations
 
-We currently only run attacks on categorical columns as the unknown column.
-
 We currently don't recognize datetime columns as datetime columns.
 
 We only input csv files. Should add parquet to this in the future.
