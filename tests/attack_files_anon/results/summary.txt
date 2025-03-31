@@ -1,35 +1,14 @@
 Anonymity Loss Coefficient Summary
     attack_files_anon
-Anonymity Level: MINOR AT RISK
-    1 attacks (3.3%) may be at risk. Examine attacks to assess risk.
+Anonymity Level: VERY STRONG
+    Consider reducing the strength of the anonymization so as to improve data quality.
 
-24 columns used as secret columns:
+3 columns used as secret columns:
   PUMA
   AGEP__discretized
   SEX
-  MSP
-  HISP
-  RAC1P
-  NOC
-  NPF
-  HOUSING_TYPE
-  OWN_RENT
-  DENSITY
-  INDP
-  INDP_CAT
-  EDU
-  PINCP
-  PINCP_DECILE
-  POVPIP
-  DVET
-  DREM
-  DPHY
-  DEYE
-  DEAR
-  PWGTP__discretized
-  WGTP__discretized
 
-27 columns used as known columns:
+24 columns used as known columns:
   AGEP
   SEX
   MSP
@@ -54,17 +33,11 @@ Anonymity Level: MINOR AT RISK
   PWGTP
   WGTP
   PUMA
-  AGEP__discretized
-  PWGTP__discretized
-  WGTP__discretized
 
-Analyzed known column / secret column combinations: 30
-Perfect anonymity:    27 (90.0%)
- Strong anonymity:     2 (6.7%)
-          At risk:     1 (3.3%)
+Analyzed known column / secret column combinations: 3
+Perfect anonymity:     3 (100.0%)
+ Strong anonymity:     0 (0.0%)
+          At risk:     0 (0.0%)
    Poor anonymity:     0 (0.0%)
      No anonymity:     0 (0.0%)
 
-Examples of at risk anonymity loss:
-ALC: 0.51, base (prec: 0.98, recall: 0.96), attack (prec: 1.0, recall: 0.96)
-    Secret: DVET, Known: ["AGEP", "DEAR", "DENSITY", "DEYE", "DPHY", "DREM", "EDU", "HISP", "HOUSING_TYPE", "INDP", "INDP_CAT", "MSP", "NOC", "NPF", "OWN_RENT", "PINCP", "PINCP_DECILE", "POVPIP", "PUMA", "PWGTP", "RAC1P", "SEX", "WGTP"]

@@ -47,7 +47,15 @@ class BrmAttack:
         self.df_atk = self.adf.orig.sample(len(self.adf.cntl))
         self.pred_res = PredictionResults(results_path = self.results_path,
                                           attack_name = attack_name)
-        self.secret_cols = list(self.original_columns)
+        # The known columns are the pre-discretized continuous columns and categorical
+        # columns (i.e. all original columns). The secret columns are the discretized
+        # continuous columns and categorical columns.
+        self.known_columns = self.original_columns
+        self.secret_cols = [self.adf.get_discretized_column(col) for col in self.original_columns]
+        print(f"There are {len(self.known_columns)} potential known columns:")
+        print(self.known_columns)
+        print(f"There are {len(self.secret_cols)} potential secret columns:")
+        print(self.secret_cols)
 
     def run_all_columns_attack(self):
         '''
@@ -56,7 +64,7 @@ class BrmAttack:
         # select a set of original rows to use for the attack
         df_atk = self.adf.orig.sample(len(self.adf.cntl))
         for secret_col in self.secret_cols:
-            known_columns = [col for col in self.original_columns if col != secret_col]
+            known_columns = [col for col in self.original_columns if col != self.adf.get_pre_discretized_column(secret_col)]
             self.attack_known_cols_secret(secret_col, known_columns, self.adf.cntl, df_atk)
             self.pred_res.summarize_results()
 
@@ -102,7 +110,6 @@ class BrmAttack:
                                  known_columns: List[str],
                                  df_base_in: pd.DataFrame,
                                  df_atk_in: pd.DataFrame) -> None:
-        secret_col = self.adf.get_discretized_secret_column(secret_col)
         print(f"Attack secret column {secret_col}\n    assuming known columns {known_columns}")
         # Shuffle df_base and df_atk to avoid any bias
         df_base = df_base_in.sample(frac=1).reset_index(drop=True)
@@ -210,7 +217,8 @@ def find_unique_column_sets(df: pd.DataFrame, max_sets: int = 1000) -> list:
                 # Don't continue working on overly small column sets
                 break
             num_distinct = df[list(cols)].drop_duplicates().shape[0]
-            if num_distinct == num_unique_rows:
+            # We want a given known columns set of values to be unique with high probability
+            if num_distinct >= (num_unique_rows * 0.95):
                 inactive = 0
                 column_sets.append(cols)
                 for col in cols:
