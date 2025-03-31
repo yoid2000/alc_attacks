@@ -39,13 +39,15 @@ class BrmAttack:
         self.min_positive_predictions = min_positive_predictions
         self.confidence_interval_tolerance = confidence_interval_tolerance
         self.confidence_level = confidence_level
+        self.original_columns = df_original.columns.tolist()
+        print(f"Original columns: {self.original_columns}")
         self.adf = DataFiles(df_original, df_control, df_synthetic)
         self.base_pred = BaselinePredictor(self.adf)
         # df_atk are the rows that will be the target of the attack
         self.df_atk = self.adf.orig.sample(len(self.adf.cntl))
         self.pred_res = PredictionResults(results_path = self.results_path,
                                           attack_name = attack_name)
-        self.secret_cols = list(self.adf.orig.columns)
+        self.secret_cols = list(self.original_columns)
 
     def run_all_columns_attack(self):
         '''
@@ -54,7 +56,7 @@ class BrmAttack:
         # select a set of original rows to use for the attack
         df_atk = self.adf.orig.sample(len(self.adf.cntl))
         for secret_col in self.secret_cols:
-            known_columns = [col for col in self.adf.orig.columns if col != secret_col]
+            known_columns = [col for col in self.original_columns if col != secret_col]
             self.attack_known_cols_secret(secret_col, known_columns, self.adf.cntl, df_atk)
             self.pred_res.summarize_results()
 
@@ -100,6 +102,7 @@ class BrmAttack:
                                  known_columns: List[str],
                                  df_base_in: pd.DataFrame,
                                  df_atk_in: pd.DataFrame) -> None:
+        secret_col = self.adf.get_discretized_secret_column(secret_col)
         print(f"Attack secret column {secret_col}\n    assuming known columns {known_columns}")
         # Shuffle df_base and df_atk to avoid any bias
         df_base = df_base_in.sample(frac=1).reset_index(drop=True)
@@ -136,7 +139,7 @@ class BrmAttack:
         decoded_predicted_value = self.adf.decode_value(secret_col, predicted_value)
         decoded_true_value = self.adf.decode_value(secret_col, true_value)
         self.pred_res.add_base_result(known_columns = known_columns,
-                                    target_col = secret_col,
+                                    secret_col = secret_col,
                                     predicted_value = decoded_predicted_value,
                                     true_value = decoded_true_value,
                                     base_confidence = proba,
@@ -173,7 +176,7 @@ class BrmAttack:
         decoded_predicted_value = self.adf.decode_value(secret_col, most_common_value)
         decoded_true_value = self.adf.decode_value(secret_col, true_value)
         self.pred_res.add_attack_result(known_columns = known_columns,
-                                    target_col = secret_col,
+                                    secret_col = secret_col,
                                     predicted_value = decoded_predicted_value,
                                     true_value = decoded_true_value,
                                     attack_confidence = fraction_agree
@@ -288,7 +291,8 @@ def run_attacks(attack_files_path):
                         results_path=results_path,
                         max_known_col_sets=100,
                         num_per_secret_attacks=2,
-                        num_rows_per_attack=10,
+                        max_rows_per_attack=10,
+                        min_rows_per_attack=5,
                         attack_name = attack_dir_name,
                         )
     else:
@@ -299,6 +303,7 @@ def run_attacks(attack_files_path):
                         attack_name = attack_dir_name,
                         )
     brm.run_auto_attack()
+
 
 
 
