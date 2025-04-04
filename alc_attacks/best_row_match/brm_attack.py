@@ -64,9 +64,9 @@ class BrmAttack:
         # select a set of original rows to use for the attack
         df_atk = self.adf.orig.sample(len(self.adf.cntl))
         for secret_col in self.secret_cols:
-            known_columns = [col for col in self.original_columns if col != self.adf.get_pre_discretized_column(secret_col)]
+            known_columns = [col for col in self.known_columns if col != self.adf.get_pre_discretized_column(secret_col)]
             self.attack_known_cols_secret(secret_col, known_columns, self.adf.cntl, df_atk)
-            self.pred_res.summarize_results()
+            self.pred_res.summarize_results(with_plot=True)
 
     def run_auto_attack(self):
         '''
@@ -79,7 +79,7 @@ class BrmAttack:
         # select a set of original rows to use for the attack
         df_atk = self.adf.orig.sample(len(self.adf.cntl))
         # Count the number of unique rows in df_atk
-        known_column_sets = find_unique_column_sets(df_atk, max_sets = self.max_known_col_sets)
+        known_column_sets = self.find_unique_column_sets(self.adf.orig, max_sets = self.max_known_col_sets)
         print(f"Found {len(known_column_sets)} unique known column sets ")
         min_set_size = min([len(col_set) for col_set in known_column_sets])
         max_set_size = max([len(col_set) for col_set in known_column_sets])
@@ -87,7 +87,7 @@ class BrmAttack:
         per_secret_column_sets = {}
         max_col_set_size = 0
         for secret_col in self.secret_cols:
-            valid_known_column_sets = [col_set for col_set in known_column_sets if secret_col not in col_set]
+            valid_known_column_sets = [col_set for col_set in known_column_sets if self.adf.get_pre_discretized_column(secret_col) not in col_set]
             sampled_known_column_sets = random.sample(valid_known_column_sets,
                                               min(self.num_per_secret_attacks, len(valid_known_column_sets)))
             max_col_set_size = max(max_col_set_size, len(sampled_known_column_sets))
@@ -104,13 +104,18 @@ class BrmAttack:
                                                   info['df_atk'])
                 # After each round of secret columns, we save the data and produce
                 # a report
-                self.pred_res.summarize_results()
+                self.pred_res.summarize_results(with_plot=True)
     
     def attack_known_cols_secret(self, secret_col: str,
                                  known_columns: List[str],
                                  df_base_in: pd.DataFrame,
                                  df_atk_in: pd.DataFrame) -> None:
-        print(f"Attack secret column {secret_col}\n    assuming known columns {known_columns}")
+        print(f"Attack secret column {secret_col}\n    assuming {len(known_columns)} known columns {known_columns}")
+        if self.adf.get_pre_discretized_column(secret_col) in known_columns:
+            raise ValueError(f"Secret column {secret_col} is in known columns")
+        for known_column in known_columns:
+            if self.adf.get_discretized_column(known_column) == secret_col:
+                raise ValueError(f"Secret column {secret_col} is in known columns")
         # Shuffle df_base and df_atk to avoid any bias
         df_base = df_base_in.sample(frac=1).reset_index(drop=True)
         df_atk = df_atk_in.sample(frac=1).reset_index(drop=True)
@@ -190,6 +195,34 @@ class BrmAttack:
                                     )
 
 
+    def find_unique_column_sets(self, df: pd.DataFrame, max_sets: int = 1000) -> list:
+        num_unique_rows = df.drop_duplicates().shape[0]
+        column_sets = []
+        stats = {}
+        for col in self.known_columns:
+            stats[col] = 0
+        for r in range(1, len(self.known_columns) + 1):
+            inactive = 0
+            col_combs = list(combinations(self.known_columns, r))
+            random.shuffle(col_combs)
+            for cols in col_combs:
+                inactive += 1
+                if inactive > 50:
+                    # Don't continue working on overly small column sets
+                    break
+                num_distinct = df[list(cols)].drop_duplicates().shape[0]
+                # We want a given known columns set of values to be unique with high probability
+                if num_distinct >= (num_unique_rows * 0.95):
+                    inactive = 0
+                    column_sets.append(cols)
+                    for col in cols:
+                        stats[col] += 1
+                    if len(column_sets) >= max_sets:
+                        pp.pprint(stats)
+                        return column_sets
+        return column_sets
+
+
 def find_valid_targets(df: pd.DataFrame, column: str) -> list:
     '''
     We don't want to attack values that are too rare, because we may have trouble
@@ -199,34 +232,6 @@ def find_valid_targets(df: pd.DataFrame, column: str) -> list:
     value_counts = df[column].value_counts(normalize=True)
     valid_targets = value_counts[(value_counts > 0.002) & (value_counts < 0.60)].index.tolist()
     return valid_targets
-
-
-def find_unique_column_sets(df: pd.DataFrame, max_sets: int = 1000) -> list:
-    num_unique_rows = df.drop_duplicates().shape[0]
-    column_sets = []
-    stats = {}
-    for col in df.columns:
-        stats[col] = 0
-    for r in range(1, len(df.columns) + 1):
-        inactive = 0
-        col_combs = list(combinations(df.columns, r))
-        random.shuffle(col_combs)
-        for cols in col_combs:
-            inactive += 1
-            if inactive > 50:
-                # Don't continue working on overly small column sets
-                break
-            num_distinct = df[list(cols)].drop_duplicates().shape[0]
-            # We want a given known columns set of values to be unique with high probability
-            if num_distinct >= (num_unique_rows * 0.95):
-                inactive = 0
-                column_sets.append(cols)
-                for col in cols:
-                    stats[col] += 1
-                if len(column_sets) >= max_sets:
-                    pp.pprint(stats)
-                    return column_sets
-    return column_sets
 
 def print_col_info(df):
     for col in df.columns:
