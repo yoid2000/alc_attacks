@@ -281,7 +281,7 @@ def run_anonymeter_attack(
 
     nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=basis[aux_cols])
 
-    guess_idx = nn.kneighbors(queries=targets[aux_cols])
+    distances, guess_idx = nn.kneighbors(queries=targets[aux_cols], return_distance=True)
     guess = basis.iloc[guess_idx.flatten()][secret]
     # df_matching contains all of the rows that match the known attributes (aux_cols) of the best
     # matching row in the basis data
@@ -294,59 +294,13 @@ def run_anonymeter_attack(
             'match_row': match_row,
             'match_modal_value': match_modal_value,
             'match_modal_count': match_modal_count,
-            'match_modal_percentage': percentage}
+            'match_modal_percentage': percentage,
+            'distance': distances.flatten()[0]}
     if len(df_matching) == 0:
         print(f"Error: no matching rows")
         pp.pprint(ans)
         sys.exit(1)
     return ans
-    #return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret], regression=regression).sum()
-
-
-def evaluate_inference_guesses(
-    guesses: pd.Series, secrets: pd.Series, regression: bool, tolerance: float = 0.05
-) -> np.ndarray:
-    """Evaluate the success of an inference attack.
-
-    The attack is successful if the attacker managed to make a correct guess.
-
-    In case of regression problems, when the secret is a continuous variable,
-    the guess is correct if the relative difference between guess and target
-    is smaller than a given tolerance. In the case of categorical target
-    variables, the inference is correct if the secrets are guessed exactly.
-
-    Parameters
-    ----------
-    guesses : pd.Series
-        Attacker guesses for each of the targets.
-    secrets : pd.Series
-        Array with the true values of the secret for each of the targets.
-    regression : bool
-        Whether or not the attacker is trying to solve a classification or
-        a regression task. The first case is suitable for categorical or
-        discrete secrets, the second for numerical continuous ones.
-    tolerance : float, default is 0.05
-        Maximum value for the relative difference between target and secret
-        for the inference to be considered correct.
-
-    Returns
-    -------
-    np.array
-        Array of boolean values indicating the correcteness of each guess.
-
-    """
-    guesses = guesses.values
-    secrets = secrets.values
-
-    if regression:
-        rel_abs_diff = np.abs(guesses - secrets) / (guesses + 1e-12)
-        value_match = rel_abs_diff <= tolerance
-    else:
-        value_match = guesses == secrets
-
-    nan_match = np.logical_and(pd.isnull(guesses), pd.isnull(secrets))
-
-    return np.logical_or(nan_match, value_match)
 
 class MixedTypeKNeighbors:
     """Nearest neighbor algorithm for mixed type data.
