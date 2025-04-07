@@ -1,4 +1,4 @@
-import anonymeter_mods
+from matching_routines import find_best_matches, modal_fraction, best_match_confidence
 import argparse
 import os
 import pandas as pd
@@ -56,6 +56,8 @@ class BrmAttack:
         print(self.known_columns)
         print(f"There are {len(self.secret_cols)} potential secret columns:")
         print(self.secret_cols)
+        print("Columns are classified as:")
+        pp.pprint(self.adf.column_classification)
 
     def run_all_columns_attack(self):
         '''
@@ -160,38 +162,40 @@ class BrmAttack:
     def best_row_attack(self, row: pd.Series,
                           secret_col: str,
                           known_columns: List[str]) -> None:
-        predictions = []
+        best_confidence = -1
+        best_pred_value = None
         for df_syn in self.adf.syn_list:
-            # check if all known_columns and secret are in df_syn
-            all_columns = known_columns + [secret_col]
-            if not all(col in df_syn.columns for col in all_columns):
+            # Check if secret_col is in df_syn
+            if secret_col not in df_syn.columns:
                 continue
-            df_row = row[known_columns].to_frame().T
-            ans_syn = anonymeter_mods.run_anonymeter_attack(
-                                            targets=df_row,
-                                            basis=df_syn,
-                                            aux_cols=known_columns,
-                                            secret=secret_col,
-                                            regression=False)
-            # Compute an answer based on the vanilla anonymeter attack
-            pred_value_series = ans_syn['guess_series']
-            pred_value = pred_value_series.iloc[0]
-            predictions.append(pred_value.item())
-        # determine the most frequent prediction in predictions, and the number
-        # of times it appears
-        counter = Counter(predictions)
-        most_common_value, most_common_count = counter.most_common(1)[0]
-        # determine the fraction of the predictions that are the most common
-        fraction_agree = most_common_count / len(predictions)
-        # get the true value of the secret column
+            # Make sure there is at least one known column in df_syn
+            shared_known_columns = list(set(known_columns) & set(df_syn.columns))
+            if len(shared_known_columns) == 0:
+                continue
+            df_query = row[shared_known_columns].to_frame().T
+            idx, min_gower_distance = find_best_matches(df_query=df_query,
+                                                        df_candidates=df_syn,
+                                                        column_classifications=self.adf.column_classification,
+                                                        columns=shared_known_columns)
+            number_of_min_gower_distance_matches = len(idx)
+            this_pred_value, modal_count = modal_fraction(df_candidates=df_syn,
+                                                     idx=idx, column=secret_col)
+            this_modal_fraction = modal_count / number_of_min_gower_distance_matches
+            this_confidence = best_match_confidence(
+                                          gower_distance=min_gower_distance,
+                                          modal_fraction=this_modal_fraction,
+                                          match_count=number_of_min_gower_distance_matches)
+            if this_confidence > best_confidence:
+                best_confidence = this_confidence
+                best_pred_value = this_pred_value
         true_value = row[secret_col]
-        decoded_predicted_value = self.adf.decode_value(secret_col, most_common_value)
         decoded_true_value = self.adf.decode_value(secret_col, true_value)
+        decoded_predicted_value = self.adf.decode_value(secret_col, best_pred_value)
         self.pred_res.add_attack_result(known_columns = known_columns,
                                     secret_col = secret_col,
-                                    predicted_value = decoded_predicted_value,
                                     true_value = decoded_true_value,
-                                    attack_confidence = fraction_agree
+                                    predicted_value = decoded_predicted_value,
+                                    attack_confidence = best_confidence
                                     )
 
 
