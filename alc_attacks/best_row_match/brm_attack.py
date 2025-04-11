@@ -1,4 +1,4 @@
-from matching_routines import find_best_matches, modal_fraction, best_match_confidence
+from alc_attacks.best_row_match.matching_routines import find_best_matches, modal_fraction, best_match_confidence
 import argparse
 import os
 import pandas as pd
@@ -6,7 +6,6 @@ import sys
 import random
 from typing import List, Union
 from itertools import combinations
-from collections import Counter
 from anonymity_loss_coefficient.anonymity_loss_coefficient import AnonymityLossCoefficient, DataFiles, BaselinePredictor, PredictionResults
 import pprint
 
@@ -236,117 +235,3 @@ def find_valid_targets(df: pd.DataFrame, column: str) -> list:
     value_counts = df[column].value_counts(normalize=True)
     valid_targets = value_counts[(value_counts > 0.002) & (value_counts < 0.60)].index.tolist()
     return valid_targets
-
-def print_col_info(df):
-    for col in df.columns:
-        print(df[col].head())
-        print('Num unique:', df[col].nunique())
-        print(df[col].describe())
-
-def establish_bins(df, types):
-    bins_dict = {}
-    for col, col_type in types.items():
-        if col_type == 'continuous' and df[col].nunique() > 50:
-            # Establish the bins for the column
-            bins = pd.cut(df[col], bins=20, retbins=True)[1]
-            bins_dict[col] = bins
-    return bins_dict
-
-def apply_bins(df, bins_dict):
-    for col, bins in bins_dict.items():
-        if col in df.columns:
-            # Apply the established bins to the column
-            df[col] = pd.cut(df[col], bins=bins, labels=False, include_lowest=True)
-    return df
-
-def run_attacks(attack_files_path):
-    #split attack_files_path into the path and the attack_files directory
-    attack_dir_name = os.path.split(attack_files_path)[-1]
-    # Check that there is indeed a directory at attack_files_path
-    if not os.path.isdir(attack_files_path):
-        print(f"Error: {attack_files_path} is not a directory")
-        sys.exit(1)
-    inputs_path = os.path.join(attack_files_path, 'inputs')
-    if not os.path.exists(inputs_path) or not os.path.isdir(inputs_path):
-        print(f"Error: {inputs_path} does not exist or is not a directory")
-        print(f"Your test files should be in {inputs_path}")
-        sys.exit(1)
-    control_data_path = os.path.join(inputs_path, 'control.csv')
-    # read the control data
-    try:
-        df_control = pd.read_csv(control_data_path)
-    except Exception as e:
-        print(f"Error reading {control_data_path}")
-        print(f"Error: {e}")
-        sys.exit(1)
-    if not os.path.exists(control_data_path):
-        print(f"Error: {control_data_path} does not exist")
-        sys.exit(1)
-    original_data_path = os.path.join(inputs_path, 'original.csv')
-    try:
-        df_original = pd.read_csv(original_data_path)
-    except Exception as e:
-        print(f"Error reading {original_data_path}")
-        print(f"Error: {e}")
-        sys.exit(1)
-    if not os.path.exists(original_data_path):
-        print(f"Error: {original_data_path} does not exist")
-        sys.exit(1)
-    synthetic_path = os.path.join(inputs_path, 'synthetic_files')
-    if not os.path.exists(synthetic_path) or not os.path.isdir(synthetic_path):
-        print(f"Error: {synthetic_path} does not exist or is not a directory")
-        sys.exit(1)
-    syn_dfs = []
-    for file in os.listdir(synthetic_path):
-        if file.endswith('.csv'):
-            syn_dfs.append(pd.read_csv(os.path.join(synthetic_path, file)))
-    results_path = os.path.join(attack_files_path, 'results')
-    if test_params:
-        brm = BrmAttack(df_original=df_original,
-                        df_control=df_control,
-                        df_synthetic=syn_dfs,
-                        results_path=results_path,
-                        max_known_col_sets=100,
-                        num_per_secret_attacks=2,
-                        max_rows_per_attack=10,
-                        min_rows_per_attack=5,
-                        attack_name = attack_dir_name,
-                        )
-    else:
-        brm = BrmAttack(df_original=df_original,
-                        df_control=df_control,
-                        df_synthetic=syn_dfs,
-                        results_path=results_path,
-                        attack_name = attack_dir_name,
-                        )
-    brm.run_auto_attack()
-
-
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Run different anonymeter_plus commands.")
-    parser.add_argument("command", help="'attack' to run make_config(), 'stats' to run attack_stats(), or 'plots' to run do_plots()")
-    parser.add_argument("attack_files_path", nargs='?', help="Optional path for attack files, used with the 'attack' command")
-
-    args = parser.parse_args()
-
-    if args.command == 'attack':
-        attack_files_path = args.attack_files_path
-        if attack_files_path:
-            print(f"Using attack files path: {attack_files_path}")
-        else:
-            attack_files_path = 'attack_files'
-        run_attacks(attack_files_path)
-    elif args.command == 'stats':
-        attack_stats()
-    elif args.command == 'plots':
-        do_plots()
-    else:
-        raise ValueError(f"Unrecognized command: {args.command}")
-
-    # Print the attack_files_path to verify
-    print(f"attack_files_path: {attack_files_path}")
-
-if __name__ == "__main__":
-    main()
