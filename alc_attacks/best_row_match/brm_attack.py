@@ -124,9 +124,9 @@ class BrmAttack:
         for i in range(min(len(df_base), len(df_atk), self.max_rows_per_attack)):
             # Get one base and attack measure at a time, and continue until we have
             # enough confidence in the results
-            base_row = df_base.iloc[i]
+            base_row = df_base.iloc[[i]]
             self.model_attack(base_row, secret_col, known_columns)
-            atk_row = df_atk.iloc[i]
+            atk_row = df_atk.iloc[[i]]
             self.best_row_attack(atk_row, secret_col, known_columns)
             if i >= 50 and i % 10 == 0:
                 # Check for confidence after every 10 attack predictions
@@ -142,13 +142,13 @@ class BrmAttack:
                     print(f"Attack confidence interval ({round(cii['ci_low'],2)}, {round(cii['ci_high'],2)}) is within tolerance after {i+1} attacks on precision {round(cii['prec'],2)}")
                     break
 
-    def model_attack(self, row: pd.Series,
+    def model_attack(self, row: pd.DataFrame,
                      secret_col: str,
                      known_columns: List[str]) -> None:
         # get the prediction for the row
-        df_row = row[known_columns].to_frame().T
+        df_row = row[known_columns]  # This is already a DataFrame
         predicted_value, proba = self.base_pred.predict(df_row)
-        true_value = row[secret_col]
+        true_value = row[secret_col].iloc[0]
         decoded_predicted_value = self.adf.decode_value(secret_col, predicted_value)
         decoded_true_value = self.adf.decode_value(secret_col, true_value)
         self.pred_res.add_base_result(known_columns = known_columns,
@@ -158,7 +158,7 @@ class BrmAttack:
                                     base_confidence = proba,
                                     )
 
-    def best_row_attack(self, row: pd.Series,
+    def best_row_attack(self, row: pd.DataFrame,
                           secret_col: str,
                           known_columns: List[str]) -> None:
         best_confidence = -1
@@ -171,7 +171,7 @@ class BrmAttack:
             shared_known_columns = list(set(known_columns) & set(df_syn.columns))
             if len(shared_known_columns) == 0:
                 continue
-            df_query = row[shared_known_columns].to_frame().T
+            df_query = row[shared_known_columns]
             idx, min_gower_distance = find_best_matches(df_query=df_query,
                                                         df_candidates=df_syn,
                                                         column_classifications=self.adf.column_classification,
@@ -187,7 +187,7 @@ class BrmAttack:
             if this_confidence > best_confidence:
                 best_confidence = this_confidence
                 best_pred_value = this_pred_value
-        true_value = row[secret_col]
+        true_value = row[secret_col].iloc[0]
         decoded_true_value = self.adf.decode_value(secret_col, true_value)
         decoded_predicted_value = self.adf.decode_value(secret_col, best_pred_value)
         self.pred_res.add_attack_result(known_columns = known_columns,

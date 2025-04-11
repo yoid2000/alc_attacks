@@ -20,7 +20,11 @@ Clone the repo locally.
 
 ## Dev
 
+To push to pypi.org:
+
 remove the `dist/` directory
+
+Update the version in `setup.py`
 
 `python setup.py sdist bdist_wheel`
 
