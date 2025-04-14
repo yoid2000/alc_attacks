@@ -1,3 +1,5 @@
+
+from anonymity_loss_coefficient import DataFiles, BaselinePredictor, PredictionResults
 from alc_attacks.best_row_match.matching_routines import find_best_matches, modal_fraction, best_match_confidence
 import argparse
 import os
@@ -6,7 +8,6 @@ import sys
 import random
 from typing import List, Union
 from itertools import combinations
-from anonymity_loss_coefficient.anonymity_loss_coefficient import AnonymityLossCoefficient, DataFiles, BaselinePredictor, PredictionResults
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)

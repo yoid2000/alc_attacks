@@ -2,7 +2,7 @@ import argparse
 import os
 import pandas as pd
 import sys
-import brm_attack
+from alc_attacks.best_row_match.brm_attack import BrmAttack
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -44,7 +44,7 @@ def run_attacks(attack_files_path):
             syn_dfs.append(pd.read_csv(os.path.join(synthetic_path, file)))
     results_path = os.path.join(attack_files_path, 'results')
     if test_params:
-        brm = brm_attack.BrmAttack(df_original=df_original,
+        brm = BrmAttack(df_original=df_original,
                         df_control=df_control,
                         df_synthetic=syn_dfs,
                         results_path=results_path,
@@ -55,7 +55,7 @@ def run_attacks(attack_files_path):
                         attack_name = attack_dir_name,
                         )
     else:
-        brm = brm_attack.BrmAttack(df_original=df_original,
+        brm = BrmAttack(df_original=df_original,
                         df_control=df_control,
                         df_synthetic=syn_dfs,
                         results_path=results_path,
