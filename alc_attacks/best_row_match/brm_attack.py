@@ -12,8 +12,6 @@ import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
 
-test_params = False
-
 class BrmAttack:
     def __init__(self,
                  df_original: pd.DataFrame,
@@ -43,8 +41,6 @@ class BrmAttack:
         print(f"Original columns: {self.original_columns}")
         self.adf = DataFiles(df_original, df_control, df_synthetic)
         self.base_pred = BaselinePredictor(self.adf)
-        # df_atk are the rows that will be the target of the attack
-        self.df_atk = self.adf.orig.sample(len(self.adf.cntl))
         self.pred_res = PredictionResults(results_path = self.results_path,
                                           attack_name = attack_name)
         # The known columns are the pre-discretized continuous columns and categorical
@@ -64,10 +60,9 @@ class BrmAttack:
         Runs attacks assuming all columns except secret are known
         '''
         # select a set of original rows to use for the attack
-        df_atk = self.adf.orig.sample(len(self.adf.cntl))
         for secret_col in self.secret_cols:
             known_columns = [col for col in self.known_columns if col != self.adf.get_pre_discretized_column(secret_col)]
-            self.attack_known_cols_secret(secret_col, known_columns, self.adf.cntl, df_atk)
+            self.attack_known_cols_secret(secret_col, known_columns, self.adf.cntl)
             self.pred_res.summarize_results(with_plot=True)
 
     def run_auto_attack(self):
@@ -78,9 +73,6 @@ class BrmAttack:
             # raise a value error
             raise ValueError("results_path must be set")
         self.run_all_columns_attack()
-        # select a set of original rows to use for the attack
-        df_atk = self.adf.orig.sample(len(self.adf.cntl))
-        # Count the number of unique rows in df_atk
         known_column_sets = self.find_unique_column_sets(self.adf.orig, max_sets = self.max_known_col_sets)
         print(f"Found {len(known_column_sets)} unique known column sets ")
         min_set_size = min([len(col_set) for col_set in known_column_sets])
@@ -94,54 +86,43 @@ class BrmAttack:
                                               min(self.num_per_secret_attacks, len(valid_known_column_sets)))
             max_col_set_size = max(max_col_set_size, len(sampled_known_column_sets))
             valid_targets = find_valid_targets(self.adf.orig, secret_col)
-            df_base = self.adf.cntl[self.adf.cntl[secret_col].isin(valid_targets)]
-            df_atk = self.df_atk[self.df_atk[secret_col].isin(valid_targets)]
-            per_secret_column_sets[secret_col] = {'known_column_sets': sampled_known_column_sets, 'df_base': df_base, 'df_atk': df_atk}
+            df_cntl = self.adf.cntl[self.adf.cntl[secret_col].isin(valid_targets)]
+            per_secret_column_sets[secret_col] = {'known_column_sets': sampled_known_column_sets, 'df_cntl': df_cntl}
         for i in range(max_col_set_size):
             for secret_col, info in per_secret_column_sets.items():
                 if i < len(info['known_column_sets']):
                     self.attack_known_cols_secret(secret_col,
                                                   list(info['known_column_sets'][i]),
-                                                  info['df_base'],
-                                                  info['df_atk'])
+                                                  info['df_cntl'])
                 # After each round of secret columns, we save the data and produce
                 # a report
                 self.pred_res.summarize_results(with_plot=True)
     
     def attack_known_cols_secret(self, secret_col: str,
                                  known_columns: List[str],
-                                 df_base_in: pd.DataFrame,
-                                 df_atk_in: pd.DataFrame) -> None:
+                                 df_cntl_in: pd.DataFrame) -> None:
         print(f"Attack secret column {secret_col}\n    assuming {len(known_columns)} known columns {known_columns}")
         if self.adf.get_pre_discretized_column(secret_col) in known_columns:
             raise ValueError(f"Secret column {secret_col} is in known columns")
         for known_column in known_columns:
             if self.adf.get_discretized_column(known_column) == secret_col:
                 raise ValueError(f"Secret column {secret_col} is in known columns")
-        # Shuffle df_base and df_atk to avoid any bias
-        df_base = df_base_in.sample(frac=1).reset_index(drop=True)
-        df_atk = df_atk_in.sample(frac=1).reset_index(drop=True)
+        # Shuffle to avoid any bias
+        df_cntl = df_cntl_in.sample(frac=1).reset_index(drop=True)
         self.base_pred.build_model(known_columns, secret_col)
-        for i in range(min(len(df_base), len(df_atk), self.max_rows_per_attack)):
+        for i in range(min(len(df_cntl), self.max_rows_per_attack)):
             # Get one base and attack measure at a time, and continue until we have
             # enough confidence in the results
-            base_row = df_base.iloc[[i]]
-            self.model_attack(base_row, secret_col, known_columns)
-            atk_row = df_atk.iloc[[i]]
+            atk_row = df_cntl.iloc[[i]]
+            self.model_attack(atk_row, secret_col, known_columns)
             self.best_row_attack(atk_row, secret_col, known_columns)
-            if i >= 50 and i % 10 == 0:
-                # Check for confidence after every 10 attack predictions
-                ci_info = self.pred_res.get_ci()
-                cii = ci_info['base']
-                pos_pred_count = round(cii['n'] * cii['prec'])
-                if cii['ci_high'] - cii['ci_low'] <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
-                    print(f"Base confidence interval ({round(cii['ci_low'],2)}, {round(cii['ci_high'],2)}) is within tolerance after {i+1} attacks on precision {round(cii['prec'],2)}")
-                    break
-                cii = ci_info['attack']
-                pos_pred_count = round(cii['n'] * cii['prec'])
-                if cii['ci_high'] - cii['ci_low'] <= self.confidence_interval_tolerance and pos_pred_count >= self.min_positive_predictions:
-                    print(f"Attack confidence interval ({round(cii['ci_low'],2)}, {round(cii['ci_high'],2)}) is within tolerance after {i+1} attacks on precision {round(cii['prec'],2)}")
-                    break
+            halt_ok, info, reason = self.pred_res.ok_to_halt()
+            if halt_ok:
+                print(f'Ok to halt after {i} attacks with ALC {info['alc']:.2f} and reason: "{reason}"\n')
+                return
+        print(f"Halt conditions never reached after {len(df_cntl)} attacks.")
+        pp.pprint(info)
+
 
     def model_attack(self, row: pd.DataFrame,
                      secret_col: str,
