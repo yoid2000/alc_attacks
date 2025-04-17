@@ -19,13 +19,11 @@ Alternatively, use the setup directories already setup in the `files` directory.
 
 * `original.csv`: Contains the original data
 
-* `synthetic_files`: This is a directory containing one or more synthetic datasets generated from the original data.
-
-All of the csv files must have the same columns.
+* `synthetic_files`: This is a directory containing one or more synthetic datasets generated from the original data. Each of these files may have a subset of the columns in `original.csv`.
 
 Note that the larger the synthetic datasets are, the longer it'll take to run the tests. Therefore it might be a good idea to limit the synthetic datasets (and likewise the original data from which they were derived) to 10k-20k or so rows.
 
-See the `tests` file for example of the setup.
+See the directories under the `tests` directory for examples of the setup.
 
 
 ## Results

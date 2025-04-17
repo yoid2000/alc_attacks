@@ -32,8 +32,6 @@ def run_attacks(attack_files_path):
     if not os.path.exists(original_data_path):
         print(f"Error: {original_data_path} does not exist")
         sys.exit(1)
-    df_control = df_original.sample(n=1000, random_state=42)
-    df_original = df_original.drop(df_control.index)
     synthetic_path = os.path.join(inputs_path, 'synthetic_files')
     if not os.path.exists(synthetic_path) or not os.path.isdir(synthetic_path):
         print(f"Error: {synthetic_path} does not exist or is not a directory")
@@ -45,7 +43,6 @@ def run_attacks(attack_files_path):
     results_path = os.path.join(attack_files_path, 'results')
     if test_params:
         brm = BrmAttack(df_original=df_original,
-                        df_control=df_control,
                         df_synthetic=syn_dfs,
                         results_path=results_path,
                         max_known_col_sets=100,
@@ -56,7 +53,6 @@ def run_attacks(attack_files_path):
                         )
     else:
         brm = BrmAttack(df_original=df_original,
-                        df_control=df_control,
                         df_synthetic=syn_dfs,
                         results_path=results_path,
                         attack_name = attack_dir_name,

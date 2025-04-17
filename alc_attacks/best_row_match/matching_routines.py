@@ -5,7 +5,8 @@ from typing import Any, Tuple, Dict
 def find_best_matches(df_candidates: pd.DataFrame,
                       df_query: pd.DataFrame,
                       column_classifications: Dict[str, str],
-                      columns: list = None) -> Tuple[pd.Index, float]:
+                      columns: list = None,
+                      debug_on: bool = False) -> Tuple[pd.Index, float]:
     """
     Optimized version of find_best_matches to compute Gower distances efficiently.
 
@@ -14,6 +15,7 @@ def find_best_matches(df_candidates: pd.DataFrame,
     - df_query: pd.DataFrame, the DataFrame with a single row (same columns as df_candidates).
     - column_classifications: dict, a dictionary mapping column names to "categorical" or "continuous".
     - columns: list, optional, the list of columns to use for the Gower distance calculation.
+    - debug_on: bool, if True, writes a CSV file 'find_best_matches.csv' with debug information.
 
     Returns:
     - Tuple:
@@ -50,19 +52,35 @@ def find_best_matches(df_candidates: pd.DataFrame,
         normalized_query = (query_row[continuous_cols] - col_min) / (col_max - col_min)
 
         # Compute absolute differences for continuous columns
-        continuous_distances = np.abs(normalized_candidates - normalized_query).sum(axis=1)
+        continuous_distances = np.abs(normalized_candidates - normalized_query)
+        continuous_distances_sum = continuous_distances.sum(axis=1)
     else:
-        continuous_distances = np.zeros(len(df_candidates))
+        continuous_distances = pd.DataFrame(np.zeros((len(df_candidates), 0)), index=df_candidates.index)
+        continuous_distances_sum = np.zeros(len(df_candidates))
 
     # Compute binary distances for categorical columns
     if categorical_cols:
-        categorical_distances = (df_candidates[categorical_cols] != query_row[categorical_cols]).sum(axis=1)
+        categorical_distances = (df_candidates[categorical_cols] != query_row[categorical_cols]).astype(int)
+        categorical_distances_sum = categorical_distances.sum(axis=1)
     else:
-        categorical_distances = np.zeros(len(df_candidates))
+        categorical_distances = pd.DataFrame(np.zeros((len(df_candidates), 0)), index=df_candidates.index)
+        categorical_distances_sum = np.zeros(len(df_candidates))
 
     # Combine distances and normalize by the number of features
     total_features = len(continuous_cols) + len(categorical_cols)
-    distances = (continuous_distances + categorical_distances) / total_features
+    distances = (continuous_distances_sum + categorical_distances_sum) / total_features
+
+    # If debug_on is True, write debug information to a CSV file
+    if debug_on:
+        debug_data = pd.DataFrame({'Distance': distances})
+        for col in df_candidates.columns:
+            debug_data[f'{col}_candidate'] = df_candidates[col]
+            debug_data[f'{col}_query'] = query_row[col]
+            if col in continuous_cols:
+                debug_data[f'{col}_distance'] = continuous_distances[col]
+            elif col in categorical_cols:
+                debug_data[f'{col}_distance'] = categorical_distances[col]
+        debug_data.to_csv('find_best_matches.csv', index=False)
 
     # Find the minimum Gower distance
     min_distance = distances.min()
