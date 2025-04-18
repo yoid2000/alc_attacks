@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='alc_attacks',
-    version='1.0.4',
+    version='1.0.5',
     description='A collection of attacks on synthetic data using the anonymity loss coefficient (ALC).',
     author='Paul Francis',
     author_email='paul@francis.com',
