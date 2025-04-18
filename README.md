@@ -11,11 +11,7 @@ So far there is only one attack, the best_row_match attack. Please see the assoc
 
 ## Install
 
-Clone the repo locally.
-
-(It goes without saying, but you should do all the following in a venv.)
-
-`pip install -r requirements.txt`
+If you only wish to run a best row match attack, easiest to simply copy `examples/best_row_match/run_brm_attack.py`, do `pip install alc_attacks`, and run the code according to the directions at `examples/best_row_match/README.md`.
 
 
 ## Dev

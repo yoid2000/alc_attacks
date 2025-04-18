@@ -1,7 +1,7 @@
 Anonymity Loss Coefficient Summary
     attack_files_anon
-Anonymity Level: MINOR AT RISK
-    1 attacks (4.2%) may be at risk. Examine attacks to assess risk.
+Anonymity Level: STRONG
+    May consider reducing the strength of the anonymization so as to improve data quality.
 
 24 columns used as secret columns:
   PUMA
@@ -55,13 +55,10 @@ Anonymity Level: MINOR AT RISK
   WGTP
   PUMA
 
-Analyzed known column / secret column combinations: 24
-Perfect anonymity:    17 (70.8%)
- Strong anonymity:     6 (25.0%)
-          At risk:     1 (4.2%)
+Analyzed known column / secret column combinations: 120
+Perfect anonymity:    99 (82.5%)
+ Strong anonymity:    21 (17.5%)
+          At risk:     0 (0.0%)
    Poor anonymity:     0 (0.0%)
      No anonymity:     0 (0.0%)
 
-Examples of at risk anonymity loss:
-ALC: 0.58, base (prec: 0.78, recall: 1.0), attack (prec: 0.91, recall: 1.0)
-    Secret: HOUSING_TYPE, Known: ["AGEP", "DEAR", "DENSITY", "DEYE", "DPHY", "DREM", "DVET", "EDU", "HISP", "INDP", "INDP_CAT", "MSP", "NOC", "NPF", "OWN_RENT", "PINCP", "PINCP_DECILE", "POVPIP", "PUMA", "PWGTP", "RAC1P", "SEX", "WGTP"]
